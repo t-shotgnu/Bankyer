@@ -1,0 +1,62 @@
+using Bankyer.Infrastructure.Database;
+using Bankyer.Infrastructure.Database.Entities;
+using Microsoft.EntityFrameworkCore;
+using Bankyer.Application.Commands;
+using Bankyer.Application.Commands.CreateAccount;
+using Bankyer.Application.Commands.DeleteAccount;
+using Bankyer.Application.Commands.Deposit;
+using Bankyer.Application.Commands.Withdraw;
+using Bankyer.Application.Handlers;
+using Bankyer.Application.Queries;
+using Bankyer.Application.Services;
+using Bankyer.Domain;
+using Bankyer.Infrastructure;
+using Bankyer.Shared;
+using Bankyer.Shared.Events;
+using Scalar.AspNetCore;
+using Bankyer.Domain.ValueObjects;
+using Serilog;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=bankyer.db"));
+
+builder.Services.AddSerilog(new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger());
+builder.Logging.AddSerilog();
+
+builder.Services
+    .AddSingleton<IEventBus, InMemoryEventBus>()
+    .AddScoped<IEventStore, DatabaseEventStore>()
+    .AddSingleton<IEventTypeResolver, EventTypeResolver>()
+    .AddTransient<IEventHandler<MoneyWithdrawnEvent>, MoneyWithdrawnEventHandler>();
+
+// Register Command Handlers and Query Handlers
+builder.Services.AddTransient<CreateAccountCommandHandler>()
+    .AddTransient<DepositCommandHandler>()
+    .AddTransient<WithdrawCommandHandler>()
+    .AddTransient<DeleteAccountCommandHandler>()
+    .AddTransient<GetAccountQueryHandler>();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.UseSerilogRequestLogging();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

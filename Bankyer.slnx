@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Bankyer.Api/Bankyer.Api.csproj" />
+  <Project Path="Bankyer.Application/Bankyer.Application.csproj" />
+  <Project Path="Bankyer.Domain.Tests/Bankyer.Domain.Tests.csproj" />
+  <Project Path="Bankyer.Domain/Bankyer.Domain.csproj" />
+  <Project Path="Bankyer.Infrastructure/Bankyer.Infrastructure.csproj" />
+  <Project Path="Bankyer.Shared/Bankyer.Shared.csproj" />
+</Solution>
