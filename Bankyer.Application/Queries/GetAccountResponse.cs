@@ -6,6 +6,7 @@ public record GetAccountResponse
 {
     public required Guid Id { get; init; }
     public required decimal Balance { get; init; }
+    public required string Currency { get; init; }
     public required string Status { get; init; }
     public required List<Transaction> Transactions { get; init; }
 

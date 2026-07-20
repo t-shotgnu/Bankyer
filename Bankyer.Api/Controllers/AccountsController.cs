@@ -1,5 +1,4 @@
 using Bankyer.Domain.ValueObjects;
-using Bankyer.Application.Commands;
 using Bankyer.Application.Commands.CreateAccount;
 using Bankyer.Application.Commands.DeleteAccount;
 using Bankyer.Application.Commands.Deposit;
@@ -20,9 +19,18 @@ public class AccountsController(
     DepositCommandHandler depositCommandHandler,
     WithdrawCommandHandler withdrawCommandHandler,
     DeleteAccountCommandHandler deleteAccountCommandHandler,
-    GetAccountQueryHandler getAccountQueryHandler)
+    GetAccountQueryHandler getAccountQueryHandler,
+    GetAllAccountsQueryHandler getAllAccountsQueryHandler)
     : ControllerBase
 {
+    /// <summary>Retrieve all accounts for development and back-office tooling.</summary>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAccounts()
+    {
+        return Ok(await getAllAccountsQueryHandler.HandleAsync());
+    }
+
     /// <summary>
     /// Retrieve account by ID.
     /// </summary>
@@ -54,9 +62,7 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateAccount([FromBody] CreateAccountRequest request)
     {
-        var entity =
-            await createAccountCommandHandler.Handle(new CreateAccountCommand(request.InitialAmount, request.Currency),
-                CancellationToken.None);
+        var entity = await createAccountCommandHandler.Handle(new CreateAccountCommand(request.InitialAmount, request.Currency), CancellationToken.None);
         return CreatedAtAction(nameof(GetAccount), new { id = entity }, entity);
     }
 
@@ -103,21 +109,14 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Withdraw(Guid id, [FromBody] MoneyRequest request)
     {
-        try
+        var withdrawResult = await withdrawCommandHandler.Handle(new WithdrawCommand(id, request.Amount, request.Currency),
+            CancellationToken.None);
+        if (withdrawResult.Errors.Count > 0)
         {
-            var entity = await withdrawCommandHandler.Handle(new WithdrawCommand(id, request.Amount, request.Currency),
-                CancellationToken.None);
-            if (entity == null)
-            {
-                return NotFound();
-            }
+            return BadRequest(withdrawResult.Errors);
+        }
 
-            return Ok(entity);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        return Ok(withdrawResult);
     }
 
     /// <summary>

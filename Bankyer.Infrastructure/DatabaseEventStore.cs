@@ -78,7 +78,7 @@ public class DatabaseEventStore(AppDbContext dbContext, IEventBus eventBus, IEve
             {
                 AggregateId = aggregateId,
                 AggregateType = aggregateType,
-                EventName = @event.GetType().Name,
+                EventName = eventTypeResolver.GetName(@event.GetType()),
                 Version = (int)currentVersion,
                 Payload = JsonSerializer.Serialize(@event, @event.GetType()),
                 CreatedAt = DateTime.UtcNow,

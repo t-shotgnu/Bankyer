@@ -4,9 +4,9 @@ using Bankyer.Shared.Events;
 
 namespace Bankyer.Application.Handlers;
 
-public class MoneyWithdrawnEventHandler(AppDbContext dbContext) : IEventHandler<MoneyWithdrawnEvent>
+public class MoneyDepositedEventHandler(AppDbContext dbContext) : IEventHandler<MoneyDepositedEvent>
 {
-    public async Task HandleAsync(MoneyWithdrawnEvent @event)
+    public async Task HandleAsync(MoneyDepositedEvent @event)
     {
         var account = await dbContext.Accounts.FindAsync(@event.Id);
         if (account is null)
@@ -14,7 +14,7 @@ public class MoneyWithdrawnEventHandler(AppDbContext dbContext) : IEventHandler<
             throw new InvalidOperationException($"Account {@event.Id} projection was not found.");
         }
 
-        account.Balance -= @event.Amount;
+        account.Balance += @event.Amount;
         await dbContext.SaveChangesAsync();
     }
 }

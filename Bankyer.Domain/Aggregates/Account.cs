@@ -1,6 +1,7 @@
 ﻿using Bankyer.Domain.ValueObjects;
 using Bankyer.Shared;
 using Bankyer.Shared.Events;
+using Bankyer.Shared.Exceptions;
 
 namespace Bankyer.Domain.Aggregates;
 
@@ -23,42 +24,55 @@ public class Account() : AggregateRoot
             throw new InvalidOperationException("Account is not active");
         }
     }
+    
+    public (bool CanDeposit, string? Reason) CanDeposit(Money amount)
+    {
+        if (Status != AccountStatus.Active)
+        {
+            return (false, "Account is not active");
+        }
+
+        if (amount.Amount <= 0)
+        {
+            return (false, "Deposit amount must be positive");
+        }
+
+        if (Balance.Currency != amount.Currency)
+        {
+            return (false, "Currency mismatch");
+        }
+
+        return (true, null);
+    }
 
     public void Deposit(Money amount)
     {
         EnsureAccountIsActive();
-
-        if (amount.Amount <= 0)
+        
+        var (canDeposit, reason) = CanDeposit(amount);
+        if (!canDeposit)
         {
-            throw new InvalidOperationException("Deposit amount must be positive");
-        }
-
-        if (Balance != null && Balance.Currency != amount.Currency)
-        {
-            throw new InvalidOperationException("Currency mismatch");
+            throw new DomainViolationException(new List<DomainRuleViolation>
+            {
+                new DomainRuleViolation("deposit.validation.failed", reason ?? "Unknown reason"),
+            });
         }
 
         RaiseEvent(new MoneyDepositedEvent(Id, amount.Amount, amount.Currency));    
     }
 
+    public DomainValidation CanWithdraw(Money amount)
+    {
+        return new DomainValidation()
+            .AddIf(Status != AccountStatus.Active, "account.not.active", "Account is not active")
+            .AddIf(amount.Amount <= 0, "withdraw.amount.not.positive", "Withdraw amount must be positive")
+            .AddIf(Balance.Currency != amount.Currency, "currency.mismatch", "Currency mismatch")
+            .AddIf(Balance.Amount < amount.Amount, "insufficient.funds", "Insufficient funds");
+    }
+
     public void Withdraw(Money amount)
     {
-        EnsureAccountIsActive();
-
-        if (Balance.Currency != amount.Currency)
-        {
-            throw new InvalidOperationException("Currency mismatch");
-        }
-
-        if (amount.Amount <= 0)
-        {
-            throw new InvalidOperationException("Withdraw amount must be positive");
-        }
-
-        if (Balance.Amount < amount.Amount)
-        {
-            throw new InvalidOperationException("Insufficient funds");
-        }
+        CanWithdraw(amount).ThrowIfInvalid();
 
         RaiseEvent(new MoneyWithdrawnEvent(Id, amount.Amount, amount.Currency));
     }
@@ -66,7 +80,6 @@ public class Account() : AggregateRoot
     protected void RaiseEvent(IDomainEvent @event)
     {
         Apply(@event);
-        Version++;
         _domainEvents.Add(@event);
     }
 
@@ -75,12 +88,12 @@ public class Account() : AggregateRoot
         foreach (var @event in history)
         {
             Apply(@event);
-            Version++;
         }
     }
 
     private void Apply(IDomainEvent @event)
     {
+        Version++;
         switch (@event)
         {
             case AccountOpenedEvent e:

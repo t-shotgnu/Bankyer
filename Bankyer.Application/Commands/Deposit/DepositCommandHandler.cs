@@ -1,5 +1,4 @@
-﻿using Bankyer.Application.Commands.CreateAccount;
-using Bankyer.Domain.Aggregates;
+﻿using Bankyer.Domain.Aggregates;
 using Bankyer.Domain.ValueObjects;
 using Bankyer.Shared;
 

@@ -45,8 +45,9 @@ public class GetAccountQueryHandler(AppDbContext dbContext, IEventStore eventSto
 
         return new GetAccountResponse
         {
-            Id = transactions.FirstOrDefault() != null ? request.Id : Guid.Empty,
-            Balance = account.Balance.Amount,
+            Id = request.Id,
+            Balance = accountEntity.Balance,
+            Currency = account.Balance.Currency.ToString(),
             Status = account.Status.ToString(),
             Transactions = transactions,
         };

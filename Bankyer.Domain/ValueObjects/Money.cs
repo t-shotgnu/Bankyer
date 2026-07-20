@@ -2,12 +2,14 @@
 
 public record Money
 {
-    public decimal Amount { get; private set; }
-    public Currency Currency { get; private set; }
-
     public Money(decimal amount, Currency currency)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(amount);
         Amount = amount;
         Currency = currency;
     }
+
+    public decimal Amount { get; init; }
+    public Currency Currency { get; init; }
+
 }
