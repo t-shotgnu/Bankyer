@@ -1,0 +1,1 @@
+Represents the current [[Money|monetary value]] available on an [[account]]. It reflects the cumulative effect of all [[Transaction|transactions]] recorded for that [[account]].
