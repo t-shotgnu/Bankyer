@@ -4,4 +4,4 @@ using Bankyer.Shared.Events;
 namespace Bankyer.Domain;
 
 [EventTypeName("account.money.withdrawn")]
-public record MoneyWithdrawnEvent(Guid Id, decimal Amount, Currency Currency) : IDomainEvent;
+public record MoneyWithdrawnEvent(Guid Id, Money Money) : IDomainEvent;

@@ -14,8 +14,7 @@ public class DepositCommandHandler(IEventStore eventStore)
             throw new InvalidOperationException("Account not found.");
         }
 
-        var account = new Account();
-        account.LoadFromHistory(history);
+        var account = Account.LoadFromHistory(history);
 
         var amountToDeposit = new Money(command.Amount, command.Currency);
         account.Deposit(amountToDeposit);

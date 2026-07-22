@@ -8,7 +8,7 @@ public class CreateAccountCommandHandler(IEventStore eventStore)
 {
     public async Task<Guid> Handle(CreateAccountCommand request, CancellationToken cancellationToken = default)
     {
-        var account = new Account(Guid.NewGuid(), request.Currency);
+        var account = Account.Create(Guid.NewGuid(), request.Currency);
         
         if (request.InitialAmount > 0)
         {

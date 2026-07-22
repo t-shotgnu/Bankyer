@@ -19,21 +19,20 @@ public class GetAccountQueryHandler(AppDbContext dbContext, IEventStore eventSto
             return null;
         }
         
-        var account = new Account();
-        account.LoadFromHistory(records.Select(record => record.Event));
+        var account = Account.LoadFromHistory(records.Select(record => record.Event));
 
         var transactions = records
             .Select(record => record.Event switch
             {
                 MoneyDepositedEvent deposit => new GetAccountResponse.Transaction
                 {
-                    Amount = deposit.Amount,
+                    Amount = deposit.Money.Amount,
                     Date = record.CreatedAt,
                     Type = GetAccountResponse.TransactionType.Deposit,
                 },
                 MoneyWithdrawnEvent withdrawal => new GetAccountResponse.Transaction
                 {
-                    Amount = withdrawal.Amount,
+                    Amount = withdrawal.Money.Amount,
                     Date = record.CreatedAt,
                     Type = GetAccountResponse.TransactionType.Withdrawal,
                 },

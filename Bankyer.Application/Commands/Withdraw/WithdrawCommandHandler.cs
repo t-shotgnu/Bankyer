@@ -20,8 +20,7 @@ public class WithdrawCommandHandler(IEventStore eventStore)
             return new WithdrawCommandResult();
         }
 
-        var account = new Account();
-        account.LoadFromHistory(history);
+        var account = Account.LoadFromHistory(history);
 
         var amountToWithdraw = new Money(request.Amount, request.Currency);
         var canWithdrawValidation = account.CanWithdraw(amountToWithdraw);

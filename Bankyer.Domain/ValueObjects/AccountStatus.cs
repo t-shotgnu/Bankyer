@@ -2,7 +2,8 @@
 
 public enum AccountStatus
 {
-    InFormation,
+    Created,
     Active,
+    Suspended,
     Closed,
 }

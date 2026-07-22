@@ -14,7 +14,7 @@ public class MoneyDepositedEventHandler(AppDbContext dbContext) : IEventHandler<
             throw new InvalidOperationException($"Account {@event.Id} projection was not found.");
         }
 
-        account.Balance += @event.Amount;
+        account.Balance += @event.Money.Amount;
         await dbContext.SaveChangesAsync();
     }
 }

@@ -11,6 +11,7 @@ using Bankyer.Domain;
 using Bankyer.Infrastructure;
 using Bankyer.Shared;
 using Bankyer.Shared.Events;
+using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -26,6 +27,9 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=bankyer.db"));
+
+builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+    .AddEntityFrameworkStores<AppDbContext>();
 
 builder.Services.AddSerilog(new LoggerConfiguration()
     .WriteTo.Console()
@@ -61,8 +65,11 @@ app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
+
+app.MapGroup("/api/auth").MapIdentityApi<IdentityUser>();
 app.MapControllers();
 
 app.Run();

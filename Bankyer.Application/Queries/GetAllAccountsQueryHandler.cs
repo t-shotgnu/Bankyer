@@ -1,30 +1,19 @@
-using Bankyer.Domain.Aggregates;
 using Bankyer.Infrastructure.Database;
-using Bankyer.Shared;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bankyer.Application.Queries;
 
-public class GetAllAccountsQueryHandler(AppDbContext dbContext, IEventStore eventStore)
+public class GetAllAccountsQueryHandler(AppDbContext dbContext)
 {
     public async Task<List<GetAllAccountsResponse>> HandleAsync()
     {
-        var entities = await dbContext.Accounts.AsNoTracking().ToListAsync();
-        var accounts = new List<GetAllAccountsResponse>(entities.Count);
-
-        foreach (var entity in entities)
-        {
-            var aggregate = new Account();
-            aggregate.LoadFromHistory(await eventStore.GetEventsAsync(entity.Id));
-            accounts.Add(new GetAllAccountsResponse
+        return await dbContext.Accounts
+            .Select(a => new GetAllAccountsResponse
             {
-                Id = entity.Id,
-                Status = entity.Status.ToString(),
-                Balance = entity.Balance,
-                Currency = aggregate.Balance.Currency.ToString(),
-            });
-        }
-
-        return accounts;
+                Id = a.Id,
+                Balance = a.Balance,
+                Status = a.Status.ToString(),
+            })
+            .ToListAsync();
     }
 }
