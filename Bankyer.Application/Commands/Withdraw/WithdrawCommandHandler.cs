@@ -6,8 +6,21 @@ namespace Bankyer.Application.Commands.Withdraw;
 
 public record WithdrawCommandResult
 {
-    public IReadOnlyList<string> Errors { get; init; } = [];
+    public IReadOnlyList<string> Errors { get; private init; } = [];
     public bool IsSuccess => Errors.Count == 0;
+    
+    public static WithdrawCommandResult WithErrors(IReadOnlyList<string> errors)
+    {
+        return new WithdrawCommandResult
+        {
+            Errors = errors
+        };
+    }
+    
+    public static WithdrawCommandResult Success()
+    {
+        return new WithdrawCommandResult();
+    }
 }
 
 public class WithdrawCommandHandler(IEventStore eventStore)
@@ -17,7 +30,7 @@ public class WithdrawCommandHandler(IEventStore eventStore)
         var history = await eventStore.GetEventsAsync(request.Id);
         if (!history.Any())
         {
-            return new WithdrawCommandResult();
+            return WithdrawCommandResult.WithErrors([ "Account not found" ]);
         }
 
         var account = Account.LoadFromHistory(history);
@@ -27,10 +40,7 @@ public class WithdrawCommandHandler(IEventStore eventStore)
         
         if (canWithdrawValidation.HasViolations)
         {
-            return new WithdrawCommandResult
-            {
-                Errors = canWithdrawValidation.Violations.Select(v => v.Message).ToList(),
-            };
+            return WithdrawCommandResult.WithErrors(canWithdrawValidation.Violations.Select(v => v.Message).ToList());
         }
 
         account.Withdraw(amountToWithdraw);
@@ -44,6 +54,6 @@ public class WithdrawCommandHandler(IEventStore eventStore)
 
         account.ClearChanges();
 
-        return new WithdrawCommandResult();
+        return WithdrawCommandResult.Success();
     }
 }

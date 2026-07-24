@@ -11,9 +11,11 @@ using Bankyer.Domain;
 using Bankyer.Infrastructure;
 using Bankyer.Shared;
 using Bankyer.Shared.Events;
+using Bankyer.Api.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,16 +25,18 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy
         .WithOrigins("http://localhost:5173", "https://localhost:5173")
         .AllowAnyHeader()
-        .AllowAnyMethod()));
+        .AllowAnyMethod()
+        .AllowCredentials()));
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=bankyer.db"));
 
-builder.Services.AddIdentityApiEndpoints<IdentityUser>()
-    .AddEntityFrameworkStores<AppDbContext>();
+builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddSerilog(new LoggerConfiguration()
-    .WriteTo.Console()
+    .WriteTo.Console(theme: AnsiConsoleTheme.Literate)
     .CreateLogger());
 builder.Logging.AddSerilog();
 
@@ -62,14 +66,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("Frontend");
 
+app.UseMiddleware<ApiResponseMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
 
-app.MapGroup("/api/auth").MapIdentityApi<IdentityUser>();
 app.MapControllers();
 
 app.Run();

@@ -1,9 +1,16 @@
 ﻿namespace Bankyer.Application.Queries;
 
-public class GetAllAccountsResponse
+public record GetAllAccountsResponse
 {
-    public Guid Id { get; set; }
-    public string Status { get; set; } = null!;
-    public decimal Balance { get; set; }
-    public string Currency { get; set; } = null!;
+    public required Guid Id { get; init; }
+    public required string Status { get; init; }
+    public required decimal Balance { get; init; }
+    public required GetCurrencyResponse Currency { get; init; }
+    
+    public record GetCurrencyResponse
+    {
+        public required string Code { get; init; }
+        public required string Name { get; init; }
+    }
 }
+

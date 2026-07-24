@@ -1,9 +1,10 @@
-using Bankyer.Domain.ValueObjects;
 using Bankyer.Application.Commands.CreateAccount;
 using Bankyer.Application.Commands.DeleteAccount;
 using Bankyer.Application.Commands.Deposit;
 using Bankyer.Application.Commands.Withdraw;
 using Bankyer.Application.Queries;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bankyer.Api.Controllers;
@@ -14,6 +15,7 @@ namespace Bankyer.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class AccountsController(
     CreateAccountCommandHandler createAccountCommandHandler,
     DepositCommandHandler depositCommandHandler,
@@ -28,7 +30,7 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAccounts()
     {
-        return Ok(await getAllAccountsQueryHandler.HandleAsync());
+        return Ok(await getAllAccountsQueryHandler.HandleAsync(GetUserId()));
     }
 
     /// <summary>
@@ -43,7 +45,7 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAccount(Guid id)
     {
-        var entity = await getAccountQueryHandler.Handle(new GetAccountQuery(id), CancellationToken.None);
+        var entity = await getAccountQueryHandler.Handle(new GetAccountQuery(id), GetUserId(), CancellationToken.None);
         if (entity == null)
         {
             return NotFound();
@@ -62,7 +64,9 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateAccount([FromBody] CreateAccountRequest request)
     {
-        var entity = await createAccountCommandHandler.Handle(new CreateAccountCommand(request.InitialAmount, request.Currency), CancellationToken.None);
+        var entity = await createAccountCommandHandler.Handle(
+            new CreateAccountCommand(request.InitialAmount, request.Currency, GetUserId()),
+            CancellationToken.None);
         return CreatedAtAction(nameof(GetAccount), new { id = entity }, entity);
     }
 
@@ -81,6 +85,11 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deposit(Guid id, [FromBody] MoneyRequest request)
     {
+        if (await getAccountQueryHandler.Handle(new GetAccountQuery(id), GetUserId(), CancellationToken.None) is null)
+        {
+            return NotFound();
+        }
+
         try
         {
             var entity = await depositCommandHandler.Handle(new DepositCommand(id, request.Amount, request.Currency),
@@ -109,6 +118,11 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Withdraw(Guid id, [FromBody] MoneyRequest request)
     {
+        if (await getAccountQueryHandler.Handle(new GetAccountQuery(id), GetUserId(), CancellationToken.None) is null)
+        {
+            return NotFound();
+        }
+
         var withdrawResult = await withdrawCommandHandler.Handle(new WithdrawCommand(id, request.Amount, request.Currency),
             CancellationToken.None);
         if (withdrawResult.Errors.Count > 0)
@@ -131,7 +145,7 @@ public class AccountsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var result = await deleteAccountCommandHandler.Handle(new DeleteAccountCommand(id), CancellationToken.None);
+        var result = await deleteAccountCommandHandler.Handle(new DeleteAccountCommand(id), GetUserId(), CancellationToken.None);
         if (!result)
         {
             return NotFound();
@@ -139,6 +153,9 @@ public class AccountsController(
 
         return NoContent();
     }
+
+    private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? throw new InvalidOperationException("Authenticated user ID is missing.");
 }
 
 /// <summary>
@@ -146,12 +163,11 @@ public class AccountsController(
 /// </summary>
 /// <param name="InitialAmount">The initial deposit amount.</param>
 /// <param name="Currency">The currency of the account.</param>
-public record CreateAccountRequest(decimal InitialAmount, Currency Currency);
+public record CreateAccountRequest(decimal InitialAmount, string Currency);
 
 /// <summary>
 /// Provide request payload to transfer money.
 /// </summary>
 /// <param name="Amount">The money amount.</param>
 /// <param name="Currency">The money currency.</param>
-public record MoneyRequest(decimal Amount, Currency Currency);
-
+public record MoneyRequest(decimal Amount, string Currency);

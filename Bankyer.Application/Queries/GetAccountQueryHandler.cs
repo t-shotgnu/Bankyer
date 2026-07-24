@@ -8,11 +8,15 @@ namespace Bankyer.Application.Queries;
 
 public class GetAccountQueryHandler(AppDbContext dbContext, IEventStore eventStore)
 {
-    public async Task<GetAccountResponse?> Handle(GetAccountQuery request, CancellationToken cancellationToken = default)
+    public async Task<GetAccountResponse?> Handle(
+        GetAccountQuery request,
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         var records = await eventStore.GetEventRecordsAsync(request.Id);
         
-        var accountEntity = await dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == request.Id, cancellationToken);
+        var accountEntity = await dbContext.Accounts
+            .FirstOrDefaultAsync(account => account.Id == request.Id && account.UserId == userId, cancellationToken);
 
         if (accountEntity == null)
         {
@@ -46,7 +50,7 @@ public class GetAccountQueryHandler(AppDbContext dbContext, IEventStore eventSto
         {
             Id = request.Id,
             Balance = accountEntity.Balance,
-            Currency = account.Balance.Currency.ToString(),
+            Currency = account.Balance.Currency,
             Status = account.Status.ToString(),
             Transactions = transactions,
         };

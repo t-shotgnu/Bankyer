@@ -10,15 +10,15 @@ public class Account : AggregateRoot
     public override string Name => "Account";
     
     public AccountStatus Status { get; private set; }
-    public Currency Currency { get; }
+    public string Currency { get; private set; } = null!;
     public Money Balance { get; private set; } = null!;
 
     private Account() { }
 
-    public static Account Create(Guid id, Currency currency)
+    public static Account Create(Guid id, string currency, string userId)
     {
         var account = new Account();
-        account.RaiseEvent(new AccountOpenedEvent(id, currency));
+        account.RaiseEvent(new AccountOpenedEvent(id, currency, userId));
         return account;
     }
 
@@ -52,6 +52,11 @@ public class Account : AggregateRoot
             return (false, "Deposit amount must be positive");
         }
 
+        if (!string.Equals(amount.Currency, Currency, StringComparison.Ordinal))
+        {
+            return (false, "Deposit currency must match the account currency");
+        }
+
         return (true, null);
     }
 
@@ -76,6 +81,7 @@ public class Account : AggregateRoot
         return new DomainValidation()
             .AddIf(Status != AccountStatus.Active, "account.not.active", "Account is not active")
             .AddIf(amount.Amount <= 0, "withdraw.amount.not.positive", "Withdraw amount must be positive")
+            .AddIf(!string.Equals(amount.Currency, Currency, StringComparison.Ordinal), "withdraw.currency.invalid", "Withdrawal currency must match the account currency")
             .AddIf(Balance.Amount < amount.Amount, "insufficient.funds", "Insufficient funds");
     }
 
@@ -99,6 +105,7 @@ public class Account : AggregateRoot
             case AccountOpenedEvent e:
                 Id = e.Id;
                 Status = AccountStatus.Active;
+                Currency = e.Currency;
                 Balance = new Money(0, e.Currency);
                 break;
 
